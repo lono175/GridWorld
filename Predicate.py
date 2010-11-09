@@ -1,3 +1,5 @@
+from __future__ import generators
+import copy
 monsterType = 2
 coinType = 3
 def getObjLoc(observation):
@@ -47,16 +49,67 @@ class MarioPre:
         marioLoc, objLoc = observation
         return [marioLoc]
 
+def xuniqueCombinations(items, n):
+    if n==0: yield []
+    else:
+        for i in xrange(len(items)):
+            for cc in xuniqueCombinations(items[i+1:],n-1):
+                yield [items[i]]+cc
 class CoinPre:
-    def __init__(self):
-        self.order = 1
+    def __init__(self, order):
+        self.order = order #order = 1 for one coin predicate
     def getFeature(self, observation):
         marioLoc, objLoc = observation
-        res = []
+        coinList = []
         for obj in objLoc:
             if obj[0] == coinType:
-                res.append((obj[1] - marioLoc[0], obj[2] - marioLoc[1]))
+                coinList.append((obj[1] - marioLoc[0], obj[2] - marioLoc[1]))
+        coinList = sorted(coinList, key=lambda obj: obj[1]) 
+        coinList = sorted(coinList, key=lambda obj: -(obj[0]*obj[0]+obj[1]*obj[1])) 
+        
+        feaList = []
+        for i in xuniqueCombinations(coinList, self.order):
+           feaList.append(i) 
+        #feaList = self.getCoinLoc(coinList, self.order-1)
+        res = []
+        while feaList != []:
+            last = feaList.pop()
+            last.reverse()
+            res.append(tuple(last))
+
         return res
+    #def getCoinLoc(self, coinList, depth):
+        #res = []
+        #if depth == 0:
+            #for obj in coinList:
+                #res.append([obj])    
+            #return res
+        #else:
+            #popCount = len(coinList) - depth - 1
+            #last = coinList.pop()
+            #lowerCoinList = self.getCoinLoc(copy.copy(coinList), depth-1)
+            #print "---------------------------"
+            #coinList.append(last)
+
+            #print "lower ", lowerCoinList
+            #print "coin ", coinList
+            #while coinList != [] and lowerCoinList != []:
+               #last = coinList.pop()
+               #print "last ", last
+               #print "coin2 ", coinList
+               #print "lower2 ", lowerCoinList
+               #for feature in lowerCoinList:
+                   #feature.append(last)
+                   #res.append(copy.copy(feature))
+                   #feature.pop() #append will change list itself
+               #print "res ", res
+               #for i in range(0, popCount):
+                   #lowerCoinList.pop()
+               #popCount = popCount - 1
+        #res.reverse()
+        #return res
+        
+        
 
 class MonsterPre:
     def __init__(self):
@@ -87,8 +140,12 @@ class CoinAndMonsterPre:
         return res
 
 if __name__ == "__main__":
-    pre = RestPre()
+    coinPre = CoinPre(1)
     marioLoc = (0,0)
-    objList = [(2, 1,1), (3, 5, 1), (2, -1, 0), (3, 1, 2)]
-    print pre.getFeature((marioLoc, objList))
+    objList = [(3, 0, -1), (3, 0, 1), (3, 0, 3), (3, 0, 2)]
+    print coinPre.getFeature((marioLoc, objList))
+    #pre = RestPre()
+    #marioLoc = (0,0)
+    #objList = [(2, 1,1), (3, 5, 1), (2, -1, 0), (3, 1, 2)]
+    #print pre.getFeature((marioLoc, objList))
 
