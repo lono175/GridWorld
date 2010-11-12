@@ -55,29 +55,31 @@ def xuniqueCombinations(items, n):
         for i in xrange(len(items)):
             for cc in xuniqueCombinations(items[i+1:],n-1):
                 yield [items[i]]+cc
+def getFeature(observation, order, type):
+    marioLoc, objLoc = observation
+    coinList = []
+    for obj in objLoc:
+        if obj[0] == type:
+            coinList.append((obj[1] - marioLoc[0], obj[2] - marioLoc[1]))
+    coinList = sorted(coinList, key=lambda obj: obj[1]) 
+    coinList = sorted(coinList, key=lambda obj: -(obj[0]*obj[0]+obj[1]*obj[1])) 
+    
+    feaList = []
+    for i in xuniqueCombinations(coinList, order):
+       feaList.append(i) 
+    #feaList = self.getCoinLoc(coinList, self.order-1)
+    res = []
+    while feaList != []:
+        last = feaList.pop()
+        last.reverse()
+        res.append(tuple(last))
+    return res
+
 class CoinPre:
     def __init__(self, order):
         self.order = order #order = 1 for one coin predicate
     def getFeature(self, observation):
-        marioLoc, objLoc = observation
-        coinList = []
-        for obj in objLoc:
-            if obj[0] == coinType:
-                coinList.append((obj[1] - marioLoc[0], obj[2] - marioLoc[1]))
-        coinList = sorted(coinList, key=lambda obj: obj[1]) 
-        coinList = sorted(coinList, key=lambda obj: -(obj[0]*obj[0]+obj[1]*obj[1])) 
-        
-        feaList = []
-        for i in xuniqueCombinations(coinList, self.order):
-           feaList.append(i) 
-        #feaList = self.getCoinLoc(coinList, self.order-1)
-        res = []
-        while feaList != []:
-            last = feaList.pop()
-            last.reverse()
-            res.append(tuple(last))
-
-        return res
+        return getFeature(observation, self.order, coinType)
     #def getCoinLoc(self, coinList, depth):
         #res = []
         #if depth == 0:
@@ -112,38 +114,54 @@ class CoinPre:
         
 
 class MonsterPre:
-    def __init__(self):
-        self.order = 1
+    def __init__(self, order):
+        self.order = order #order = 1 for one coin predicate
 
     def getFeature(self, observation):
-        marioLoc, objLoc = observation
-        res = []
-        for obj in objLoc:
-            if obj[0] == monsterType:
-                res.append((obj[1] - marioLoc[0], obj[2] - marioLoc[1]))
-        return res
+        return getFeature(observation, self.order, monsterType)
+
+    #def getFeature(self, observation):
+        #marioLoc, objLoc = observation
+        #res = []
+        #for obj in objLoc:
+            #if obj[0] == monsterType:
+                #res.append((obj[1] - marioLoc[0], obj[2] - marioLoc[1]))
+        #return res
 
 class CoinAndMonsterPre:
-    def __init__(self):
-        self.order = 2
+    def __init__(self, coinOrder, monsterOrder):
+        self.coinOrder = coinOrder
+        self.monsterOrder = monsterOrder
 
     def getFeature(self, observation):
-        marioLoc, objLoc = observation
+        coinFea = getFeature(observation, self.coinOrder, coinType)
+        monFea = getFeature(observation, self.monsterOrder, monsterType)
         res = []
-        for coin in objLoc:
-            if coin[0] == coinType:
-                for monster in objLoc:
-                    if monster[0] == monsterType:
-                        coinDiff = (coin[1] - marioLoc[0], coin[2] - marioLoc[1])
-                        monsterDiff = (monster[1] - marioLoc[0], monster[2] - marioLoc[1])
-                        res.append((coinDiff, monsterDiff))
+        for coin in coinFea:
+            for monster in monFea:
+                res.append((coin, monster))
         return res
+
+    #def getFeature(self, observation):
+        #marioLoc, objLoc = observation
+        #res = []
+        #for coin in objLoc:
+            #if coin[0] == coinType:
+                #for monster in objLoc:
+                    #if monster[0] == monsterType:
+                        #coinDiff = (coin[1] - marioLoc[0], coin[2] - marioLoc[1])
+                        #monsterDiff = (monster[1] - marioLoc[0], monster[2] - marioLoc[1])
+                        #res.append((coinDiff, monsterDiff))
+        #return res
 
 if __name__ == "__main__":
     coinPre = CoinPre(1)
     marioLoc = (0,0)
-    objList = [(3, 0, -1), (3, 0, 1), (3, 0, 3), (3, 0, 2)]
-    print coinPre.getFeature((marioLoc, objList))
+    objList = [(3, 0, -1), (3, 0, 1), (2, 0, 3), (3, 0, 2)]
+    ob = (marioLoc, objList)
+    #print coinPre.getFeature()
+    CMPre = CoinAndMonsterPre(0, 0)
+    print CMPre.getFeature(ob)
     #pre = RestPre()
     #marioLoc = (0,0)
     #objList = [(2, 1,1), (3, 5, 1), (2, -1, 0), (3, 1, 2)]
