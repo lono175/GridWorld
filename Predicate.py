@@ -129,7 +129,7 @@ class MonsterPre:
         #return res
 
 class CoinAndMonsterPre:
-    def __init__(self, coinOrder, monsterOrder):
+    def __init__(self, monsterOrder, coinOrder):
         self.coinOrder = coinOrder
         self.monsterOrder = monsterOrder
 
