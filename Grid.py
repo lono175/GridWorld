@@ -4,6 +4,8 @@ import RelationalQ
 import SARSA
 import Predicate
 import GridEnv
+import random
+import csv #for csv output
 
          
 
@@ -18,7 +20,7 @@ def Load(filename):
     input = open(filename, 'rb')
     return pickle.load(input)
 
-def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, trainingStage, objSet, maxEpisode, isEpisodeEnd):
+def TestRun(controller, type, discrete_size, monsterMoveProb, objSet, maxStep):
     size = 800, 800
     gridSize = (discrete_size, discrete_size)
     delay = 100
@@ -31,65 +33,49 @@ def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, training
     actionList = ((0, 1), (0, -1), (1, 0), (-1, 0))
     env = GridEnv.Grid((discrete_size, discrete_size), size, actionList, monsterMoveProb)
 
-    isTraining = not isEpisodeEnd
-    maxStep = 200
+    isTraining = False
+    isUpdate = True
 
     numOfTurtle = objSet[0]
     numOfCoin = objSet[1]
 
     print "# coin ", numOfCoin
     print "# Turtle ", numOfTurtle
-    print "training stage ", trainingStage
-    print "isEpisodeEnd ", isEpisodeEnd
 
     count = 0
     
     totalReward = 0
-    rewardList = {}
-    #while 1:
-    for i in range(0, maxEpisode):
+    rewardList = []
+    obList = []
+    totalStep = 0
+
+    while True:
+        if totalStep > maxStep:
+            break
         #print totalReward
-        rewardList[i] = totalReward
 
         world = env.start(numOfTurtle, numOfCoin)
         objLoc = getObjLoc(world, gridSize)
         marioLoc = getMarioLoc(world, gridSize)
         ob = (marioLoc, objLoc)
-        if type == 'RRL':
-            action = controller.start(ob)
-        elif type == 'SARSA':
-            action = controller.start(Predicate.getSarsaFeature(ob))
+        if type == 'SARSA':
+            ob = Predicate.getSarsaFeature(ob)
+
+        action = controller.start(ob)
+
         count += 1
-        #if count % 100 == 0:
-            #print "monster------------------"
-            ##print controller.agent[2].Q
-            #for y in range(-2, 3):
-                #for x in range(-2, 3):
-                    #for action in actionList:
-                        #controller.agent[2].touch((x, y), action)
-                        #print (x, y), " ", action, " ", controller.agent[2].Q[((x, y), action)]
-            #print "coin------------------"
-            ##print controller.agent[2].Q
-            #for y in range(-2, 3):
-                #for x in range(-2, 3):
-                    #for action in actionList:
-                        #controller.agent[3].touch((x, y), action)
-                        #print (x, y), " ", action, " ", controller.agent[3].Q[((x, y), action)]
-            #print "world------------------"
-            #for y in range(0, 3):
-                #for x in range(0, 3):
-                    #for action in actionList:
-                        #controller.agent[1].touch((x, y), action)
-                        #print (x, y), " ", action, " ", controller.agent[1].Q[((x, y), action)]
-            #print "all------------------"
-            #for y in range(0, 3):
-                #for x in range(0, 3):
-                    #for action in actionList:
-                        #controller.agent[0].touch((x, y), action)
-                        #print (x, y), " ", action, " ", controller.agent[0].Q[((x, y), action)]
-        for j in range(0, maxStep):
+        while True:
+            if totalStep > maxStep:
+                break
+                
+            totalStep += 1
             clock.tick(5000)
+
             reward, world, flag = env.step(action, isTraining)
+            ob = list(ob)
+            ob.append(action)
+            obList.append(ob)
+            rewardList.append(reward)
             totalReward = totalReward + reward
             if flag:
                 if type == 'RRL':
@@ -102,19 +88,24 @@ def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, training
             objLoc = getObjLoc(world, gridSize)
             marioLoc = getMarioLoc(world, gridSize)
             ob = (marioLoc, objLoc)
+
+            if type == 'SARSA':
+                ob = Predicate.getSarsaFeature(ob)
+
             if type == 'RRL':
                 action = controller.step(reward, ob, trainingStage)
             elif type == 'SARSA':
-                action = controller.step(reward, Predicate.getSarsaFeature(ob), isUpdate)
+                action = controller.step(reward, ob, isUpdate)
             else:
                 assert False
+
             for event in pygame.event.get():
-               #action = 0
                if event.type == pygame.QUIT: sys.exit()
+
             #screen.blit(env.getScreen(), (0, 0))
             #pygame.display.flip()
     #print totalReward
-    return rewardList, controller
+    return rewardList, obList
 
 def getMarioLoc(observation, size):
     height, width = size
@@ -175,6 +166,15 @@ def DumpRRL(controller):
             for action in actionList:
                 controller.agent[4].touch(((x, y), (1, 0)), action)
                 print (x, y), " ", action, " ", controller.agent[4].Q[(((x, y), (1, 0)), action)]
+def GetSample():
+    discrete_size = 8
+    monsterMoveProb = 0.3
+    isUpdate = True
+
+    actionList = ((0, 1), (0, -1), (1, 0), (-1, 0))
+    controller = SARSA.SARSA(0.1, 0.2, 0.9, actionList)
+    reward, controller = TestRun(controller, 'SARSA', discrete_size, monsterMoveProb, isUpdate, 4, (1,1), maxEpisode, True)
+    
 def SmallWorldTest(agentConf, maxTrainEpisode, maxTestEpisode):
 
     discrete_size = 8
@@ -232,40 +232,174 @@ def SmallWorldTest(agentConf, maxTrainEpisode, maxTestEpisode):
     SaveToCSV(reward, 'RRL_test_'+str(trainEpisode)+'_'+str(lastConf)+'_'+str(len(agentConf))+'.csv')
     #Save(controller, 'RRL_test_controller_'+str(trainEpisode)+'_'+str(lastConf)+'_'+str(len(agentConf))+'.txt')
 
+def ToBinary(num, len):
+    digitList = []
+    for i in range(0, len-1):
+        digitList.append('0')
+    if num >= 0:
+        digitList[num] = '1'
+    #else:
+        #digitList[len -num -1] = '1'
+    return digitList
+    #resStr = ''
+    #for digit in digitList:
+        #resStr += digit
+    #return resStr
+
         
 def SaveToCSV(list, filename):
     FILE = open(filename,"w")
     for index in list:
-        FILE.write(str(list[index]))
+        FILE.write(str(index))
         FILE.write(', ')
     FILE.close()
+def SaveMatToCSV(mat, filename):
+    writer = csv.writer(open(filename, "w"))
+    for row in mat:
+        res = []
+        for cell in row:
+            for num in cell:
+                res = res + ToBinary(num, 8)
+        writer.writerow(res)
+    
+def SaveNumberToCSV(mat, filename, lenList):
+    writer = csv.writer(open(filename, "w"))
+    for row in mat:
+        res = []
+        index = 0
+        for num in row:
+            maxLen =lenList[index]  
+            #print "max: ", maxLen
+            #print num
+            assert maxLen > num
+            res = res + ToBinary(num, maxLen)
+            index = index + 1
+        writer.writerow(res)
+def GenData(filename):
+    writer = csv.writer(open(filename, "w"))
+    size = 4
+    for i in range(1, 10000):
+        res = []
+        len = size
+        digit = random.random()*len
+        res = res + ToBinary(int(digit), len)
+        len = size
+        digit = random.random()*len
+        res = res + ToBinary(int(digit), len)
+        len = size
+        digit = random.random()*len
+        res = res + ToBinary(int(digit), len)
+        len = size
+        digit = random.random()*len
+        res = res + ToBinary(int(digit), len)
+
+        len = size*size
+        digit = random.random()*len
+        res = res + ToBinary(int(digit), len)
+        len = size*size
+        digit = random.random()*len
+        res = res + ToBinary(int(digit), len)
+
+        len = size*size*size*size
+        digit = random.random()*len
+        res = res + ToBinary(int(digit), len)
+
+        #len = 256*16
+        #digit = random.random()*len
+        #res = res + ToBinary(int(digit), len)
+
+        #len = 64*64
+        #digit = random.random()*len
+        #res = res + ToBinary(int(digit), len)
+        writer.writerow(res)
+def TupleToNumber(tuple, lenList):
+    number = 0
+    index = 0
+    for val in tuple:
+        number = val + number*lenList[index]
+        #else:
+            #number = val
+        index = index + 1
+    return number
+def ExtractFeature(feature, gridSize):
+    res = []
+    #gridSize = 4
+    offset = gridSize - 1
+    gridLenSize = 2*gridSize
+    actionSize = 2
+    actionLenSize = 2*actionSize
+    actionOff = actionSize - 1
+    for row in feature:
+        newFea = []
+        newFea.append(row[1])
+        newFea.append(row[2])
+        newFea.append(row[3])
+
+        monFeature = (newFea[0][0] + offset, newFea[0][1] + offset, newFea[2][0] + actionOff, newFea[2][1] + actionOff);
+        coinFeature = (newFea[1][0] + offset, newFea[1][1] + offset, newFea[2][0] + actionOff, newFea[2][1] + actionOff);
+        secondOrder = (newFea[0][0] + offset, newFea[0][1] + offset, newFea[1][0] + offset, newFea[1][1] + offset, newFea[2][0] + actionOff, newFea[2][1] + actionOff);
+
+        monNum = TupleToNumber(monFeature, [gridLenSize, gridLenSize, actionLenSize, actionLenSize])
+        coinNum = TupleToNumber(coinFeature, [gridLenSize, gridLenSize, actionLenSize, actionLenSize])
+        secondNum = TupleToNumber(secondOrder, [gridLenSize, gridLenSize, gridLenSize, gridLenSize, actionLenSize, actionLenSize])
+        preTuple = [monFeature, coinFeature, secondOrder]
+        #print preTuple
+        #pre = [monNum, coinNum, secondNum]
+        pre = [monNum, coinNum]
+        res.append(pre)
+    #for row 
+    return res
 if __name__ == "__main__":
+    #GenData('obList.csv')
+    #print TupleToNumber((7,7,3,3), [8,8,4,4])
+
+
+    discrete_size = 8
+    monsterMoveProb = 0.2
+    isUpdate = True
+    maxStep = 10000
+
+    actionList = ((0, 1), (0, -1), (1, 0), (-1, 0))
+
+    controller = SARSA.SARSA(0.1, 0.2, 0.9, actionList)
+    reward, ob = TestRun(controller, 'SARSA', discrete_size, monsterMoveProb, (1,1), maxStep)
+    #print ob
+    ob = ExtractFeature(ob, discrete_size)
+    maxSize = 2*discrete_size*2*discrete_size*4*4;
+    #print reward
+    #print ob
+
+    SaveToCSV(reward, 'rewardList.csv')
+    #SaveNumberToCSV(ob, 'obList.csv', [8*8*4*4, 8*8*4*4, 8*8*8*8*4*4])
+    SaveNumberToCSV(ob, 'obList.csv', [maxSize, maxSize])
+
     #reward = Load('convergence.txt')
     #SaveToCSV(reward, 'conv.csv')
-    trainEpisodeList = [10000]
-    testEpisode = 20000
-    agentList =                      \
-    [                                \
-    #[(0, 1)],                        \
-    #[(0, 2)],                        \
-    #[(0, 3)],                        \
-    #[(0, 1), (0, 2)],                \
-    #[(1, 0), (0, 1), (1, 1)],                 \
-    #[(1, 0), (0, 1), (1, 1), (0, 2), (1, 2)], \
-    #[(0, 1), (0, 2), (0, 3)],        \
-    #[(0, 1), (0, 2), (0, 3), (0, 4)],\
-    #[(1, 0)],                        \
-    #[(1, 0), (0, 1), (1, 1), (2, 0), (2, 1)], \
-    #[(1, 0), (2, 0)],                \
-    [(2, 0)],                        \
-    [(1, 0), (0, 1), (1, 1), (2, 0), (0, 2), (2, 1), (1, 2), (2, 2)], \
-    #[(3, 0)],                        \
-    #[(1, 0), (2, 0), (3, 0)],        \
-    #[(1, 0), (2, 0), (3, 0), (4, 0)]\
-    ]
-    for trainEpisode in trainEpisodeList:
-        for agentConf in agentList:
-            SmallWorldTest(agentConf, trainEpisode, testEpisode)
+
+    #trainEpisodeList = [10000]
+    #testEpisode = 20000
+    #agentList =                      \
+    #[                                \
+    ##[(0, 1)],                        \
+    ##[(0, 2)],                        \
+    ##[(0, 3)],                        \
+    ##[(0, 1), (0, 2)],                \
+    ##[(1, 0), (0, 1), (1, 1)],                 \
+    ##[(1, 0), (0, 1), (1, 1), (0, 2), (1, 2)], \
+    ##[(0, 1), (0, 2), (0, 3)],        \
+    ##[(0, 1), (0, 2), (0, 3), (0, 4)],\
+    ##[(1, 0)],                        \
+    ##[(1, 0), (0, 1), (1, 1), (2, 0), (2, 1)], \
+    ##[(1, 0), (2, 0)],                \
+    #[(2, 0)],                        \
+    #[(1, 0), (0, 1), (1, 1), (2, 0), (0, 2), (2, 1), (1, 2), (2, 2)], \
+    ##[(3, 0)],                        \
+    ##[(1, 0), (2, 0), (3, 0)],        \
+    ##[(1, 0), (2, 0), (3, 0), (4, 0)]\
+    #]
+    #for trainEpisode in trainEpisodeList:
+        #for agentConf in agentList:
+            #SmallWorldTest(agentConf, trainEpisode, testEpisode)
     #for maxEpisode in range(100, 1000, 100):
         #controller = train(maxEpisode, 'SARSA')
         #Save(controller, 'SARSA-Agent' + str(maxEpisode) + '.txt')
