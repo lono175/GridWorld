@@ -2,6 +2,7 @@ from __future__ import generators
 import copy
 monsterType = 2
 coinType = 3
+
 def getObjLoc(observation):
     res = []
     for y in range(0, self.height):

@@ -1,5 +1,6 @@
 import random
 import sys,pygame
+
 class Grid:
     def __init__(self, size, imgSize, actionList, monsterMoveProb):
         self.size = self.width, self.height = size

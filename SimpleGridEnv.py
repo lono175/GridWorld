@@ -94,26 +94,26 @@ class SimpleGrid:
     def updateState(self, action):
         reward = 0
         marioOldLoc = self.marioLoc
-        if marioOldLoc in self.world:
-            self.world[marioOldLoc] = 0
+        
+
 
         #move Monster
-        if random.random() < self.monsterMoveProb:
-            monLoc = self.find(2)
+        #if random.random() < self.monsterMoveProb:
+            #monLoc = self.find(2)
 
-            diffMon = (marioOldLoc[0] - monLoc[0], marioOldLoc[1] - monLoc[1])
-            monAction = (0, 0)
-            if diffMon[0] > 0:
-                monAction = (1, 0)
-            elif diffMon[1] > 0:
-                monAction = (0, 1)
-            elif diffMon[0] < 0:
-                monAction = (-1, 0)
-            elif diffMon[1] < 0:
-                monAction = (0, -1)
-            monNewLoc =(monLoc[0]+monAction[0], monLoc[1]+monAction[1]) 
-            self.world[monLoc] = 0
-            self.world[monNewLoc] = 2
+            #diffMon = (marioOldLoc[0] - monLoc[0], marioOldLoc[1] - monLoc[1])
+            #monAction = (0, 0)
+            #if diffMon[0] > 0:
+                #monAction = (1, 0)
+            #elif diffMon[1] > 0:
+                #monAction = (0, 1)
+            #elif diffMon[0] < 0:
+                #monAction = (-1, 0)
+            #elif diffMon[1] < 0:
+                #monAction = (0, -1)
+            #monNewLoc =(monLoc[0]+monAction[0], monLoc[1]+monAction[1]) 
+            #self.world[monLoc] = 0
+            #self.world[monNewLoc] = 2
 
         #move Mario
         #if random.random() < 0.1:
@@ -121,14 +121,24 @@ class SimpleGrid:
             #action = self.actionList[int(random.random()*len(self.actionList))]
 
         marioNewLoc = (marioOldLoc[0]+action[0], marioOldLoc[1]+action[1])
-        self.marioLoc = marioNewLoc
+
+        print action
+        print marioOldLoc
+        print marioNewLoc
+        print self.world
 
         #check Mario stays in the boundary
         if marioNewLoc in self.world:
+            self.marioLoc = marioNewLoc
             #check if Mario eats coin
             if self.world[marioNewLoc] == 3:
                 reward = 20
             self.world[marioNewLoc] = 1
+            if marioOldLoc in self.world:
+                self.world[marioOldLoc] = 0
+        else:
+            reward = -1
+
         return reward
 
     #def getSarsaFeature(self):

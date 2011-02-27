@@ -1,4 +1,5 @@
 import random
+
 class SARSA:
     def __init__(self, alpha, epsilon, gamma, actionList ):
         self.alpha = alpha

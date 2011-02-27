@@ -46,6 +46,7 @@ def TestRun(controller, type, gridSize, monsterMoveProb, isUpdate, trainingStage
     
     totalReward = 0
     rewardList = {}
+    featureList = {}
     #while 1:
     for i in range(0, maxEpisode):
         #print totalReward
@@ -90,6 +91,14 @@ def TestRun(controller, type, gridSize, monsterMoveProb, isUpdate, trainingStage
         for j in range(0, maxStep):
             clock.tick(clockRate)
             reward, world, flag = env.step(action, isTraining)
+
+            #print objLoc
+            #print marioLoc
+            #print action
+            #print reward
+            matlabFeature = getMatlabFeature(reward, action, marioLoc, objLoc)
+            featureList.append(matlabFeature)
+
             totalReward = totalReward + reward
             if flag:
                 if type == 'RRL':
@@ -115,7 +124,24 @@ def TestRun(controller, type, gridSize, monsterMoveProb, isUpdate, trainingStage
                 screen.blit(env.getScreen(), (0, 0))
                 pygame.display.flip()
     #print totalReward
-    return rewardList, controller
+    return rewardList, controller, featureList
+
+def getMatlabFeature(reward, action, marioLoc, objLoc):
+    feature = []
+    feature.append(reward)
+    feature.append(action[1])
+    
+    hist = []
+    for i in range(0, 9):
+        hist.append(0)
+    for obj in objLoc:
+        dist = obj[2] - marioLoc[1]
+        hist[dist+4] = hist[dist+4] + 1
+    for i in range(0, 9):
+        feature.append(hist[i])
+    return feature
+
+
 
 def getMarioLoc(observation, size):
     height, width = size
@@ -183,42 +209,43 @@ def SmallWorldTest():
     #controller = Load('controller.txt')
     #DumpController(controller)
 
-    maxCoinNum = 5
-    discrete_size = (1, maxCoinNum+1)
+    maxCoinNum = 3
+    discrete_size = (1, 5)
     monsterMoveProb = 0
-    maxEpisode = 50000
+    maxEpisode = 10
     isUpdate = True
-    isDraw = False
-    tickNum = 1000
+    isDraw = True
+    tickNum = 10
 
     actionList = ((0, 1), (0, -1))
 
     preList = []
-    for i in range(maxCoinNum):
-        preList.append(Predicate.CoinPre(i+1))
+    preList.append(Predicate.CoinPre(maxCoinNum))
     alpha = 0.1
     epsilon = 1
     controller = RelationalQ.RelationalQ(alpha, epsilon, 0.8, actionList, preList)
 
     #trainEpisodeList = [0, 50, 100, 150]
-    trainEpisodeList = [50000]
+    trainEpisodeList = [10]
     for trainEpisode in trainEpisodeList:
-        for trainingStage in range(1, maxCoinNum+1): 
-            print "stage: ", trainingStage 
+            #print "stage: ", trainingStage 
 
             numOfTurtle = 0
-            numOfCoin = trainingStage
-            reward, controller = TestRun(controller, 'RRL', discrete_size, monsterMoveProb, isUpdate, trainingStage, (numOfTurtle, numOfCoin), trainEpisode, True, isDraw, tickNum)
+            numOfCoin = maxCoinNum
+            reward, controller, featureList = TestRun(controller, 'RRL', discrete_size, monsterMoveProb, isUpdate, maxCoinNum, (numOfTurtle, numOfCoin), trainEpisode, True, isDraw, tickNum)
+            SaveToCSV(featureList, "three.txt")
             #DumpRRL(controller)
             #raw_input("Press Enter to continue...")
-        Save(controller, 'RRL_Random_controller_train_'+str(trainEpisode)+'.txt')
+        #Save(controller, 'RRL_Random_controller_train_'+str(trainEpisode)+'.txt')
 
         
 def SaveToCSV(list, filename):
     FILE = open(filename,"w")
-    for val in list:
-        FILE.write(str(val))
-        FILE.write(', ')
+    for line in list:
+        for val in line:
+            FILE.write(str(val))
+            FILE.write(', ')
+        FILE.write('\n')
     FILE.close()
 
 def RemoveLargeValue(controller, filenamePrefix):
@@ -248,12 +275,12 @@ def RemoveLargeValue(controller, filenamePrefix):
 if __name__ == "__main__":
     #reward = Load('convergence.txt')
     #SaveToCSV(reward, 'conv.csv')
-    #SmallWorldTest()
+    SmallWorldTest()
     #controller = Load('RRL_complex_controller_train_'+str(5000)+'.txt')
     #RemoveLargeValue(controller, 'Greedy')
 
-    controller = Load('RRL_Random_controller_train_'+str(50000)+'.txt')
-    RemoveLargeValue(controller, 'Random')
+    #controller = Load('RRL_Random_controller_train_'+str(50000)+'.txt')
+    #RemoveLargeValue(controller, 'Random')
 
     #print controller.agent[1].Q
     #print "------------------"
