@@ -6,13 +6,19 @@ XType = 1
 YType = 2
 
 class LinearSARSA:
-    def __init__(self, alpha, epsilon, gamma, actionList, initialQ ):
+    def __init__(self, alpha, epsilon, gamma, actionList, initialQ, dumpCount ):
         self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
         self.actionList = actionList
         self.initialQ = initialQ
         self.Q = {}
+        self.dumpCount = dumpCount
+        self.episodeNum = 0
+    def touchAll(self, observation):
+        for action in self.actionList:
+            self.touch(observation, action)
+
     def touch(self, observation, action):
         for fea in observation:
             if not (fea, action) in self.Q:
@@ -22,13 +28,11 @@ class LinearSARSA:
         if random.random() < self.epsilon:
             #select randomly
             action = self.actionList[int(random.random()*len(self.actionList))]
-            self.touch(observation, action)
             return action
         else:
             #select the best action
             v = []
             for action in self.actionList:
-                self.touch(observation, action)
                 v.append(self.getQ(observation, action))
             assert len(v) > 0
             m = max(v)
@@ -60,7 +64,7 @@ class LinearSARSA:
     def updateQ(self, lastObservation, lastAction, delta):
         numOfFeature = len(lastObservation)
         deltaPerFeature = delta/numOfFeature
-        print "delta: ", deltaPerFeature
+        #print "delta: ", deltaPerFeature
         for fea in lastObservation:
             self.Q[(fea, lastAction)] = self.Q[(fea, lastAction)] + self.alpha*deltaPerFeature
         
@@ -89,12 +93,15 @@ class LinearSARSA:
     def start(self, observation):
         ob = self.getFeature(observation)
         self.lastObservation = ob
+        self.touchAll(ob)
         self.lastAction = self.selectAction(ob)
+        self.episodeNum = self.episodeNum + 1
         return self.lastAction
 
     def step(self, reward, observation, isUpdate):
         ob = self.getFeature(observation)
         self.lastObservation = ob
+        self.touchAll(ob)
         newAction = self.selectAction(ob)
         if isUpdate:
             self.update(self.lastObservation, self.lastAction, reward, ob, newAction)
@@ -106,9 +113,20 @@ class LinearSARSA:
             oldQ = self.getQ(self.lastObservation, self.lastAction)
             delta = reward - oldQ
             self.updateQ(self.lastObservation, self.lastAction, delta)
-    
+        if self.episodeNum % self.dumpCount == 0:
+            self.dump()
+    def dump(self):
+        for varType in range(1,3):
+            for varVal in range (-2, 3):
+                ob = (3, varType, varVal)
+                for action in self.actionList:
+                    key = (ob, action)
+                    self.touch([ob], action)
+                    print key, " ", self.Q[key]
+
+
 if __name__ == "__main__":
-    
+
     isUpdate = True
     initialQ = 0
     controller = LinearSARSA(0.5, 0, 0.8, (-1, 1), initialQ)
@@ -138,4 +156,4 @@ if __name__ == "__main__":
     #print controller.Q
     #pickle.loads(xp)
     #y
-    
+

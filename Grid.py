@@ -2,7 +2,9 @@ import sys,pygame
 import copy #for copy objects
 import RelationalQ
 import SARSA
+import LinearSARSA
 import Predicate
+import LinearSARSA
 import GridEnv
 
          
@@ -18,7 +20,7 @@ def Load(filename):
     input = open(filename, 'rb')
     return pickle.load(input)
 
-def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, trainingStage, objSet, maxEpisode, isEpisodeEnd):
+def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, trainingStage, objSet, maxEpisode, isEpisodeEnd, isShow, frameRate):
     size = 800, 800
     gridSize = (discrete_size, discrete_size)
     delay = 100
@@ -92,7 +94,7 @@ def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, training
                         #controller.agent[0].touch((x, y), action)
                         #print (x, y), " ", action, " ", controller.agent[0].Q[((x, y), action)]
         for j in range(0, maxStep):
-            clock.tick(10)
+            clock.tick(frameRate)
             reward, world, flag = env.step(action, isTraining)
             totalReward = totalReward + reward
             if flag:
@@ -108,15 +110,16 @@ def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, training
             ob = (marioLoc, objLoc)
             if type == 'RRL':
                 action = controller.step(reward, ob, trainingStage)
-            elif type == 'SARSA':
+            elif type == 'SARSA' or 'LinearSARSA':
                 action = controller.step(reward, Predicate.getSarsaFeature(ob), isUpdate)
             else:
                 assert False
             for event in pygame.event.get():
                #action = 0
                if event.type == pygame.QUIT: sys.exit()
-            screen.blit(env.getScreen(), (0, 0))
-            pygame.display.flip()
+            if isShow:
+                screen.blit(env.getScreen(), (0, 0))
+                pygame.display.flip()
     #print totalReward
     return rewardList, controller
 
@@ -188,10 +191,18 @@ def SmallWorldTest(agentConf, maxTrainEpisode, maxTestEpisode):
 
     actionList = ((0, 1), (0, -1), (1, 0), (-1, 0))
 
-    controller = SARSA.SARSA(0.1, 0.2, 0.9, actionList)
-    reward, controller = TestRun(controller, 'SARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTrainEpisode, True)
+    #controller = SARSA.SARSA(0.1, 0.2, 0.9, actionList)
+    dumpCount = 1000
+    initialQ = 0
+    isShow = False
+    frameRate = 5000
+    controller = LinearSARSA.LinearSARSA(0.1, 0.2, 0.9, actionList, initialQ, dumpCount)
+    reward, controller = TestRun(controller, 'LinearSARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTrainEpisode, True, isShow, frameRate)
+    SaveToCSV(reward, 'LinearSarsaComp'+str(maxTrainEpisode)+'.csv')
+    return
     reward, controller = TestRun(controller, 'SARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTestEpisode, True)
     SaveToCSV(reward, 'SarsaComp'+str(maxTrainEpisode)+'.csv')
+
     #Save(controller, 'SarsaCompController'+'.txt')
     #print controller.Q
     #DumpSARSA(controller)
@@ -248,7 +259,8 @@ def SaveToCSV(list, filename):
 if __name__ == "__main__":
     #reward = Load('convergence.txt')
     #SaveToCSV(reward, 'conv.csv')
-    trainEpisodeList = [0, 400, 800, 1200, 1600, 2000, 2400, 2800]
+    #trainEpisodeList = [0, 400, 800, 1200, 1600, 2000, 2400, 2800]
+    trainEpisodeList = [200000]
     testEpisode = 100
     agentList =                      \
     [                                \
