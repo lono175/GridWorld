@@ -1,7 +1,10 @@
 from __future__ import generators
 import copy
-monsterType = 2
-coinType = 3
+import gridDef
+monsterType = gridDef.monsterType
+coinType = gridDef.coinType
+XType = gridDef.XType
+YType = gridDef.YType
 
 def getObjLoc(observation):
     res = []
@@ -26,14 +29,38 @@ def getNearObj(observation, type):
 
     res = []
     for obj in objDist:
-       res.append(obj[1])
-       res.append(obj[2]) 
+        res.append(obj[1])
+        res.append(obj[2]) 
     return tuple(res)
+
+def getRelFeature(ob):
+    marioLoc, monLoc, coinLoc = ob
+
+    feaList = []
+    #separate it into individual faetures
+    i = 0
+    for loc in monLoc:
+        if i % 2 == 0:
+            fea = (monsterType, XType, loc)
+        else:
+            fea = (monsterType, YType, loc)
+        i = i + 1
+        feaList.append(fea)
+    i = 0
+    for loc in coinLoc:
+        if i % 2 == 0:
+            fea = (coinType, XType, loc)
+        else:
+            fea = (coinType, YType, loc)
+        i = i + 1
+        feaList.append(fea)
+    return feaList
+
 def getSarsaFeature(observation):
     marioLoc, objLoc = observation
     coinLoc = getNearObj(observation, coinType)
     monLoc = getNearObj(observation, monsterType)
-    return (marioLoc, monLoc, coinLoc)
+    return getRelFeature((marioLoc, monLoc, coinLoc))
     
 class RestPre:
     def __init__(self):
@@ -73,7 +100,11 @@ def getFeature(observation, order, type):
     while feaList != []:
         last = feaList.pop()
         last.reverse()
-        res.append(tuple(last))
+        listOfLoc = []
+        for loc in last:
+            listOfLoc.append(loc[0])
+            listOfLoc.append(loc[1])
+        res.append(tuple(listOfLoc))
     return res
 
 class CoinPre:
@@ -135,12 +166,13 @@ class CoinAndMonsterPre:
         self.monsterOrder = monsterOrder
 
     def getFeature(self, observation):
+        marioLoc, objLoc = observation
         coinFea = getFeature(observation, self.coinOrder, coinType)
         monFea = getFeature(observation, self.monsterOrder, monsterType)
         res = []
         for coin in coinFea:
             for monster in monFea:
-                res.append((coin, monster))
+                res.append(getRelFeature((marioLoc, monster, coin)))
         return res
 
     #def getFeature(self, observation):

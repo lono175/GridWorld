@@ -20,7 +20,7 @@ def Load(filename):
     input = open(filename, 'rb')
     return pickle.load(input)
 
-def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, trainingStage, objSet, maxEpisode, isEpisodeEnd, isShow, frameRate):
+def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, trainingStage, objSet, maxEpisode, isEpisodeEnd, isShow, frameRate, maxStep):
     size = 800, 800
     gridSize = (discrete_size, discrete_size)
     delay = 100
@@ -34,7 +34,7 @@ def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, training
     env = GridEnv.Grid((discrete_size, discrete_size), size, actionList, monsterMoveProb)
 
     isTraining = not isEpisodeEnd
-    maxStep = 200
+    #maxStep = 200
 
     numOfTurtle = objSet[0]
     numOfCoin = objSet[1]
@@ -184,24 +184,24 @@ def DumpRRL(controller):
                 print (x, y), " ", action, " ", controller.agent[4].Q[(((x, y), (1, 0)), action)]
 def SmallWorldTest(agentConf, maxTrainEpisode, maxTestEpisode):
 
-    discrete_size = 8
+    isShow = True
+    frameRate = 10
+    discrete_size = 16
     monsterMoveProb = 0.3
     isUpdate = True
     worldConf = (3, 5)
 
     actionList = ((0, 1), (0, -1), (1, 0), (-1, 0))
 
-    #controller = SARSA.SARSA(0.1, 0.2, 0.9, actionList)
-    dumpCount = 1000
-    initialQ = 0
-    isShow = False
-    frameRate = 5000
-    controller = LinearSARSA.LinearSARSA(0.1, 0.2, 0.9, actionList, initialQ, dumpCount)
-    reward, controller = TestRun(controller, 'LinearSARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTrainEpisode, True, isShow, frameRate)
-    SaveToCSV(reward, 'LinearSarsaComp'+str(maxTrainEpisode)+'.csv')
-    return
-    reward, controller = TestRun(controller, 'SARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTestEpisode, True)
-    SaveToCSV(reward, 'SarsaComp'+str(maxTrainEpisode)+'.csv')
+    if False:
+        dumpCount = 1000
+        initialQ = 0
+        controller = LinearSARSA.LinearSARSA(0.1, 0.2, 0.9, actionList, initialQ, dumpCount)
+        #controller = SARSA.SARSA(0.1, 0.2, 0.9, actionList)
+        reward, controller = TestRun(controller, 'LinearSARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTrainEpisode, True, isShow, frameRate)
+        SaveToCSV(reward, 'LinearSarsaComp'+str(maxTrainEpisode)+'.csv')
+        reward, controller = TestRun(controller, 'SARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTestEpisode, True, isShow, frameRate)
+        SaveToCSV(reward, 'SarsaComp'+str(maxTrainEpisode)+'.csv')
 
     #Save(controller, 'SarsaCompController'+'.txt')
     #print controller.Q
@@ -234,7 +234,7 @@ def SmallWorldTest(agentConf, maxTrainEpisode, maxTestEpisode):
         if coinNum > 0:
             isEpisodeEnd = True
 
-        reward, controller = TestRun(controller, 'RRL', discrete_size, monsterMoveProb, isUpdate, trainingStage, conf, trainEpisode, isEpisodeEnd)
+        reward, controller = TestRun(controller, 'RRL', discrete_size, monsterMoveProb, isUpdate, trainingStage, conf, trainEpisode, isEpisodeEnd, isShow, frameRate)
         #Save(controller, 'RRL_controller_train_'+str(trainEpisode)+ '_'+str(lastConf)+'_'+str(len(agentConf)) + '.txt')
         #DumpRRL(controller)
         trainingStage = trainingStage + 1
@@ -245,7 +245,7 @@ def SmallWorldTest(agentConf, maxTrainEpisode, maxTestEpisode):
     #DumpRRL(controller)
 
     isEpisodeEnd = True
-    reward, controller = TestRun(controller, 'RRL', discrete_size, monsterMoveProb, isUpdate, trainingStage, worldConf, maxTestEpisode, isEpisodeEnd)
+    reward, controller = TestRun(controller, 'RRL', discrete_size, monsterMoveProb, isUpdate, trainingStage, worldConf, maxTestEpisode, isEpisodeEnd, isShow, frameRate)
     SaveToCSV(reward, 'RRL_test_'+str(trainEpisode)+'_'+str(lastConf)+'_'+str(len(agentConf))+'.csv')
     #Save(controller, 'RRL_test_controller_'+str(trainEpisode)+'_'+str(lastConf)+'_'+str(len(agentConf))+'.txt')
 
@@ -264,7 +264,8 @@ if __name__ == "__main__":
     testEpisode = 100
     agentList =                      \
     [                                \
-    [(5, 3)]                         \
+    [(1, 1), (2, 5)],                 \
+    #[(5, 3)]                         \
     #[(0, 1)],                        \
     #[(0, 2)],                        \
     #[(0, 3)],                        \

@@ -1,5 +1,7 @@
 import random
-import RLSARSA
+#import RLSARSA
+import LinearSARSA
+
 #all, mario position, monster, coin,  coin+monster
 #predict Q from lower order
 #use the difference between the predicted and real one to update higher order relations
@@ -13,7 +15,10 @@ class RelationalQ:
 
         self.agent = []
         for i in range(0, predicateSize + 1): #agent[0] is the global Q
-            self.agent.append(RLSARSA.RLSARSA(alpha))
+            initialQ = 0
+            dumpCount = 0 #dump is done by relationalQ
+            self.agent.append(LinearSARSA.LinearSARSA(alpha, epsilon, gamma, actionList, initialQ, dumpCount ))
+            #self.agent.append(RLSARSA.RLSARSA(alpha))
 
     def updateAllQ(self, observation):
         marioLoc, objLoc = observation        
@@ -75,7 +80,6 @@ class RelationalQ:
         #print "-start-"
         #print "obj loc: ", self.getObjLoc(observation)
         marioLoc, objLoc = (observation)
-        #self.lastObservation = observation
         self.lastObservation = observation
         self.lastAction = self.selectAction(observation)
         self.lastQ = self.getQ(observation, self.lastAction)
@@ -93,7 +97,7 @@ class RelationalQ:
             feaList = pred.getFeature(observation)
             for fea in feaList:
                 #TODO: add regression here, it doesn't work for more than one feature
-                self.agent[i].update(fea, action, deltaQ)
+                self.agent[i].updateQ(fea, action, deltaQ)
         
     def step(self, reward, observation, trainingStage):
         marioLoc, objLoc = observation
@@ -137,10 +141,10 @@ def getObjLoc(observation, size):
 import Predicate
 if __name__ == "__main__":
     
-    preList = [Predicate.MarioPre(), Predicate.MonsterPre(), Predicate.CoinPre()]
+    preList = [Predicate.CoinAndMonsterPre(0, 1), Predicate.CoinAndMonsterPre(1, 0), Predicate.CoinAndMonsterPre(1, 1)]
     size = (5, 1)
     controller = RelationalQ(0.2, 0, 0.5, (-1, 1), preList)
-    trainingStage = 2
+    trainingStage = 3
     world = {}
     world[(0, 0)] = 1
     world[(1, 0)] = 0

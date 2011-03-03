@@ -2,8 +2,8 @@ import random
 import gridDef
 monsterType = gridDef.monsterType
 coinType = gridDef.coinType
-XType = 1
-YType = 2
+XType = gridDef.XType
+YType = gridDef.YType
 
 class LinearSARSA:
     def __init__(self, alpha, epsilon, gamma, actionList, initialQ, dumpCount ):
@@ -50,6 +50,7 @@ class LinearSARSA:
             return action
 
     def getQ(self, ob, action):
+        self.touch(ob, action)
         Q = 0
         for fea in ob:
             Q = Q + self.Q[(fea, action)]
@@ -68,30 +69,8 @@ class LinearSARSA:
         for fea in lastObservation:
             self.Q[(fea, lastAction)] = self.Q[(fea, lastAction)] + self.alpha*deltaPerFeature
         
-    def getFeature(self, ob):
-        marioLoc, monLoc, coinLoc = ob
-
-        feaList = []
-        #separate it into individual faetures
-        i = 0
-        for loc in monLoc:
-            if i % 2 == 0:
-                fea = (monsterType, XType, loc)
-            else:
-                fea = (monsterType, YType, loc)
-            i = i + 1
-            feaList.append(fea)
-        i = 0
-        for loc in coinLoc:
-            if i % 2 == 0:
-                fea = (coinType, XType, loc)
-            else:
-                fea = (coinType, YType, loc)
-            i = i + 1
-            feaList.append(fea)
-        return feaList
     def start(self, observation):
-        ob = self.getFeature(observation)
+        ob = observation
         self.lastObservation = ob
         self.touchAll(ob)
         self.lastAction = self.selectAction(ob)
@@ -99,7 +78,7 @@ class LinearSARSA:
         return self.lastAction
 
     def step(self, reward, observation, isUpdate):
-        ob = self.getFeature(observation)
+        ob = observation
         self.lastObservation = ob
         self.touchAll(ob)
         newAction = self.selectAction(ob)
