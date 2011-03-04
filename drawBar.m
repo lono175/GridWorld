@@ -1,7 +1,7 @@
 
 fileList10 = {'RRL_test_0__0__1__2', 'RRL_test_200__0__1__2', 'RRL_test_400__0__1__2', 'RRL_test_600__0__1__2','RRL_test_800__0__1__2', 'RRL_test_1000__0__1__2', 'RRL_test_1200__0__1__2', 'RRL_test_1400__0__1__2'}
-fileList1 = {'RRL_test_0_(0, 1)_2', 'RRL_test_200_(0, 1)_2', 'RRL_test_400_(0, 1)_2', 'RRL_test_600_(0, 1)_2','RRL_test_800_(0, 1)_2', 'RRL_test_1000_(0, 1)_2', 'RRL_test_1200_(0, 1)_2', 'RRL_test_1400_(0, 1)_2'}
-fileList2 = {'SarsaComp0', 'SarsaComp400', 'SarsaComp800', 'SarsaComp1200', 'SarsaComp1600', 'SarsaComp2000', 'SarsaComp2400', 'SarsaComp2800'}
+%fileList1 = {'RRL_test_0_(0, 1)_2', 'RRL_test_200_(0, 1)_2', 'RRL_test_400_(0, 1)_2', 'RRL_test_600_(0, 1)_2','RRL_test_800_(0, 1)_2', 'RRL_test_1000_(0, 1)_2', 'RRL_test_1200_(0, 1)_2', 'RRL_test_1400_(0, 1)_2'}
+%fileList2 = {'SarsaComp0', 'SarsaComp400', 'SarsaComp800', 'SarsaComp1200', 'SarsaComp1600', 'SarsaComp2000', 'SarsaComp2400', 'SarsaComp2800'}
 
 reward = [];
 fileList = fileList1;

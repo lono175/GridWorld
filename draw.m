@@ -1,6 +1,6 @@
 %load no_transfer.csv
 %load transfer.csv
-load 4vs3no.csv
+val = load('4vs3no.csv');
 load 4vs3tran.csv
 
 data = X4vs3tran;

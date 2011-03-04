@@ -20,7 +20,8 @@ def Load(filename):
     input = open(filename, 'rb')
     return pickle.load(input)
 
-def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, trainingStage, objSet, maxEpisode, isEpisodeEnd, isShow, frameRate, maxStep):
+def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, trainingStage, objSet, maxStep, isEpisodeEnd, isShow, frameRate):
+    print "MaxStep: ", maxStep
     size = 800, 800
     gridSize = (discrete_size, discrete_size)
     delay = 100
@@ -47,11 +48,12 @@ def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, training
     count = 0
     
     totalReward = 0
-    rewardList = {}
-    #while 1:
-    for i in range(0, maxEpisode):
+    rewardList = []
+    stepCount = 0
+    while stepCount < maxStep:
+    #for i in range(0, maxEpisode):
         #print totalReward
-        rewardList[i] = totalReward
+        #rewardList[i] = totalReward
 
         world = env.start(numOfTurtle, numOfCoin)
         objLoc = getObjLoc(world, gridSize)
@@ -93,10 +95,15 @@ def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, training
                     #for action in actionList:
                         #controller.agent[0].touch((x, y), action)
                         #print (x, y), " ", action, " ", controller.agent[0].Q[((x, y), action)]
-        for j in range(0, maxStep):
+        #for j in range(0, maxStep):
+        prevStepCount = stepCount
+        episodeReward = 0
+        while stepCount < maxStep:
+            stepCount = stepCount + 1
             clock.tick(frameRate)
             reward, world, flag = env.step(action, isTraining)
             totalReward = totalReward + reward
+            episodeReward = episodeReward + reward
             if flag:
                 if type == 'RRL':
                     controller.end(reward, trainingStage)
@@ -120,7 +127,8 @@ def TestRun(controller, type, discrete_size, monsterMoveProb, isUpdate, training
             if isShow:
                 screen.blit(env.getScreen(), (0, 0))
                 pygame.display.flip()
-    #print totalReward
+        rewardList.append((prevStepCount, stepCount, episodeReward))
+    print totalReward
     return rewardList, controller
 
 def getMarioLoc(observation, size):
@@ -182,26 +190,26 @@ def DumpRRL(controller):
             for action in actionList:
                 controller.agent[4].touch(((x, y), (1, 0)), action)
                 print (x, y), " ", action, " ", controller.agent[4].Q[(((x, y), (1, 0)), action)]
-def SmallWorldTest(agentConf, maxTrainEpisode, maxTestEpisode):
+def SmallWorldTest(isShow, frameRate, discrete_size, worldConf, agentConf, maxTrainEpisode, maxTestEpisode):
 
-    isShow = True
-    frameRate = 10
-    discrete_size = 16
+    #isShow = True
+    #frameRate = 10
+    #discrete_size = 16
     monsterMoveProb = 0.3
     isUpdate = True
-    worldConf = (3, 5)
+    #worldConf = (3, 5)
 
     actionList = ((0, 1), (0, -1), (1, 0), (-1, 0))
 
-    if False:
-        dumpCount = 1000
-        initialQ = 0
-        controller = LinearSARSA.LinearSARSA(0.1, 0.2, 0.9, actionList, initialQ, dumpCount)
-        #controller = SARSA.SARSA(0.1, 0.2, 0.9, actionList)
-        reward, controller = TestRun(controller, 'LinearSARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTrainEpisode, True, isShow, frameRate)
-        SaveToCSV(reward, 'LinearSarsaComp'+str(maxTrainEpisode)+'.csv')
-        reward, controller = TestRun(controller, 'SARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTestEpisode, True, isShow, frameRate)
-        SaveToCSV(reward, 'SarsaComp'+str(maxTrainEpisode)+'.csv')
+    #if False:
+    dumpCount = 10000000000
+    initialQ = 0
+    #controller = LinearSARSA.LinearSARSA(0.1, 0.2, 0.9, actionList, initialQ, dumpCount)
+    #controller = SARSA.SARSA(0.1, 0.2, 0.9, actionList)
+    #reward, controller = TestRun(controller, 'LinearSARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTrainEpisode, True, isShow, frameRate)
+    #SaveToCSV(reward, 'LinearSarsaTrainX'+ str(discrete_size) + 'X' + str(worldConf[0]) +'_' + str(worldConf[1])+ 'X' + str(maxTrainEpisode)+'.csv')
+    #reward, controller = TestRun(controller, 'LinearSARSA', discrete_size, monsterMoveProb, isUpdate, 4, worldConf, maxTestEpisode, True, isShow, frameRate)
+    #SaveToCSV(reward, 'LinearSarsaTestX'+ str(discrete_size) + 'X'+ str(worldConf[0]) +'_'+ str(worldConf[1])+'X' +str(maxTestEpisode)+'.csv')
 
     #Save(controller, 'SarsaCompController'+'.txt')
     #print controller.Q
@@ -246,47 +254,74 @@ def SmallWorldTest(agentConf, maxTrainEpisode, maxTestEpisode):
 
     isEpisodeEnd = True
     reward, controller = TestRun(controller, 'RRL', discrete_size, monsterMoveProb, isUpdate, trainingStage, worldConf, maxTestEpisode, isEpisodeEnd, isShow, frameRate)
-    SaveToCSV(reward, 'RRL_test_'+str(trainEpisode)+'_'+str(lastConf)+'_'+str(len(agentConf))+'.csv')
+    SaveToCSV(reward, 'RRLXtestX'+ str(discrete_size) + 'X'+ str(worldConf[0])+'_'+str(worldConf[1]) + 'X' +str(maxTrainEpisode)+'X'+str(lastConf[0])+'_'+str(lastConf[1])+'X'+str(len(agentConf))+'.csv')
     #Save(controller, 'RRL_test_controller_'+str(trainEpisode)+'_'+str(lastConf)+'_'+str(len(agentConf))+'.txt')
 
         
 def SaveToCSV(list, filename):
     FILE = open(filename,"w")
-    for index in list:
-        FILE.write(str(list[index]))
-        FILE.write(', ')
+    for line in list:
+        for item in line:
+            FILE.write(str(item))
+            FILE.write(', ')
+        FILE.write('\n')
     FILE.close()
 if __name__ == "__main__":
     #reward = Load('convergence.txt')
-    #SaveToCSV(reward, 'conv.csv')
+    #SaveToCSV(r]ward, 'conv.csv')
     #trainEpisodeList = [0, 400, 800, 1200, 1600, 2000, 2400, 2800]
-    trainEpisodeList = [200000]
+    multipler = 1000
+    #trainEpisodeList = [1, 5, 10, 20, 40, 60, 80, 100]
+    trainEpisodeList = [1, 5, 10, 20, 40, 60, 80, 100]
+    #trainEpisodeList = [10]
     testEpisode = 100
+
+    i = 0
+    for item in trainEpisodeList:
+        trainEpisodeList[i] = item*multipler
+        i = i + 1
+    
+    print trainEpisodeList
+    testEpisode = testEpisode*multipler
+
+    discreteSizeList = [8, 16, 24, 32]
+    confList = [(3, 5), (6, 10), (12, 20)]
     agentList =                      \
     [                                \
-    [(1, 1), (2, 5)],                 \
+    #[(1, 1), (2, 5)],                 \
     #[(5, 3)]                         \
-    #[(0, 1)],                        \
-    #[(0, 2)],                        \
+    [(1, 1)],                        \
+    [(1, 2)],                        \
+    [(2, 1)],                        \
+    [(0, 1)],                        \
+    [(0, 2)],                        \
+    [(1, 0)],                        \
+    [(2, 0)],                        \
     #[(0, 3)],                        \
-    #[(0, 1), (0, 2)],                \
-    #[(1, 0), (0, 1)],                 \
-    #[(1, 0), (0, 1), (1, 1)],                 \
-    #[(1, 0), (0, 1), (1, 1), (0, 2), (1, 2)], \
+    [(0, 1), (0, 2)],                \
+    [(1, 0), (0, 1)],                 \
+    [(1, 0), (0, 1), (1, 1)],                 \
+    [(1, 1), (1, 2)],                \
+    [(1, 0), (0, 1), (1, 1), (0, 2), (1, 2)], \
     #[(0, 1), (0, 2), (0, 3)],        \
     #[(0, 1), (0, 2), (0, 3), (0, 4)],\
-    #[(1, 0)],                        \
-    #[(1, 0), (0, 1), (1, 1), (2, 0), (2, 1)], \
+    [(1, 1), (2, 1)],                \
+    [(1, 0), (0, 1), (1, 1), (2, 0), (2, 1)], \
     #[(1, 0), (2, 0)],                \
-    #[(2, 0)],                        \
     #[(1, 0), (0, 1), (1, 1), (2, 0), (0, 2), (2, 1), (1, 2), (2, 2)], \
     #[(3, 0)],                        \
     #[(1, 0), (2, 0), (3, 0)],        \
     #[(1, 0), (2, 0), (3, 0), (4, 0)]\
     ]
-    for trainEpisode in trainEpisodeList:
-        for agentConf in agentList:
-            SmallWorldTest(agentConf, trainEpisode, testEpisode)
+    isShow = False
+    frameRate = 5000
+    #discrete_size = 16
+    #worldConf = (3, 5)
+    for discreteSize in discreteSizeList:
+        for worldConf in confList:
+            for trainEpisode in trainEpisodeList:
+                for agentConf in agentList:
+                    SmallWorldTest(isShow, frameRate, discreteSize, worldConf, agentConf, trainEpisode, testEpisode)
     #for maxEpisode in range(100, 1000, 100):
         #controller = train(maxEpisode, 'SARSA')
         #Save(controller, 'SARSA-Agent' + str(maxEpisode) + '.txt')
