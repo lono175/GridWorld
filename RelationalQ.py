@@ -5,20 +5,41 @@ import LinearSARSA
 #all, mario position, monster, coin,  coin+monster
 #predict Q from lower order
 #use the difference between the predicted and real one to update higher order relations
+#conf: (2, 1) 2 monster, 1 coin
+#conf: (0, 0) mario location
 class RelationalQ:
-    def __init__(self, alpha, epsilon, gamma, actionList, predList):
+    def __init__(self, alpha, epsilon, gamma, actionList, agentList):
         self.actionList = actionList
         self.epsilon = epsilon
         self.gamma = gamma
-        self.predList = predList
-        predicateSize = len(predList)
+        self.initialQ = 0
+        self.dumpCount = 0 #dump is done by relationalQ
+        #self.predList = predList
 
-        self.agent = []
-        for i in range(0, predicateSize + 1): #agent[0] is the global Q
-            initialQ = 0
-            dumpCount = 0 #dump is done by relationalQ
-            self.agent.append(LinearSARSA.LinearSARSA(alpha, epsilon, gamma, actionList, initialQ, dumpCount ))
-            #self.agent.append(RLSARSA.RLSARSA(alpha))
+        self.agent = {}
+        self.dirtyAgent = {}
+        for conf in agentList:
+            self.agent[conf] = LinearSARSA.LinearSARSA(alpha, epsilon, gamma, actionList, self.initialQ, self.dumpCount )
+
+    def getCurConf(self, observation):
+        marioLoc, objLoc = observation
+        monNum = 0
+        coinNum = 0
+        for obj in objLoc:
+            if obj[0] == coinType:
+                coinNum = coinNum + 1
+            else if obj[0] == monsterType:
+                monNum = monNum + 1
+        return (monNum, coinNum)
+
+    def addDirtyAgent(self, conf):
+        #agent[0] is the global Q
+        if not conf in self.dirtyAgent:
+            #if the agent is clean, copy the agent to the dirty list
+            if conf in self.agent:
+                self.dirtyAgent[conf] = self.agent[conf]
+            else:
+                self.dirtyAgent[conf] = LinearSARSA.LinearSARSA(alpha, epsilon, gamma, actionList, self.initialQ, self.dumpCount ) 
 
     def updateAllQ(self, observation):
         marioLoc, objLoc = observation        
@@ -27,25 +48,23 @@ class RelationalQ:
 
     def getQ(self, observation, action):
         Q = 0
-        i = 1
-        for pred in self.predList:
-            feaList = pred.getFeature(observation)
+        curConf = self.getCurConf(observation)
+        for conf in self.agent:
+            if conf == curConf: #use the value in the dirty list
+                continue
+            feaList = Predicate.GetRelFeature(observation, conf[0], conf[1])
             for fea in feaList:
-                Q = Q + self.agent[i].getQ(fea, action)
-            i = i + 1
+                Q = Q + self.agent[conf].getQ(fea, action)
+
+        #check if the curConf is in dirtyAgent or not
+        if curConf == self.trainingStage:
+            #it is still clean
+            Q = Q + self.agent[curConf].getQ(Predicate.GetRelFeature(observation, curConf[0], curConf[1]) 
+        else:
+            #it is dirty
+            self.addDirtyAgent(curConf)
+            Q = Q + self.dirtyAgent[curConf].getQ(Predicate.GetRelFeature(observation, curConf[0], curConf[1]) 
         return Q
-        #Q = self.agent[1].getQ(key, action)
-
-        #for obj in objectLoc:
-            #type, objX, objY = obj
-            #diff = (x-objX, y-objY)
-
-            ##self.agent[type].touch(diff, action)
-            ##print "type: ", type
-            ##print "diff: ", diff
-            #Q = Q + self.agent[type].getQ(diff, action)
-        #return Q
-
          
     def selectAction(self, observation):
         marioLoc, objLoc = observation
@@ -76,10 +95,11 @@ class RelationalQ:
                 i = i + 1
             return action
 
-    def start(self, observation):
+    def start(self, observation, trainingStage):
         #print "-start-"
         #print "obj loc: ", self.getObjLoc(observation)
         marioLoc, objLoc = (observation)
+        self.trainingStage = trainingStage
         self.lastObservation = observation
         self.lastAction = self.selectAction(observation)
         self.lastQ = self.getQ(observation, self.lastAction)
@@ -88,32 +108,33 @@ class RelationalQ:
     def getDeltaQ(self, lastQ, reward, newQVal):
         return (reward + self.gamma * newQVal - lastQ)
 
-    def updateQ(self, trainingStage, observation, action, deltaQ):
-        i = 0
-        for pred in self.predList:
-            i = i + 1
-            if i != trainingStage:
-                continue
-            feaList = pred.getFeature(observation)
-            for fea in feaList:
-                #TODO: add regression here, it doesn't work for more than one feature
-                self.agent[i].updateQ(fea, action, deltaQ)
+    def updateQ(self, observation, action, deltaQ):
+        #find current conf
+        curConf = self.getCurConf(observation)
+        if curConf != self.trainingStage:
+           #it is dirty
+           self.addDirtyAgent(curConf)
+           self.dirtyAgent[curConf].updateQ(Predicate.GetRelFeature(observation, conf[0], conf[1]), action, deltaQ)
+        else:
+           #it is clean
+           self.agent[curConf].updateQ(Predicate.GetRelFeature(observation, conf[0], conf[1]), action, deltaQ)
+
         
-    def step(self, reward, observation, trainingStage):
+    def step(self, reward, observation):
         marioLoc, objLoc = observation
         newAction = self.selectAction(observation)
         newQ = self.getQ(observation, newAction)
         deltaQ = self.getDeltaQ(self.lastQ, reward, newQ)
-        self.updateQ( trainingStage, self.lastObservation, self.lastAction, deltaQ)
+        self.updateQ( self.lastObservation, self.lastAction, deltaQ)
 
         self.lastObservation = observation
         self.lastAction = newAction
         self.lastQ = newQ
         return newAction
 
-    def end(self, reward, trainingStage):
+    def end(self, reward):
         diffQ = self.getDeltaQ(self.lastQ, reward, 0)
-        self.updateQ( trainingStage, self.lastObservation, self.lastAction, diffQ)
+        self.updateQ( self.lastObservation, self.lastAction, diffQ)
 
 
         

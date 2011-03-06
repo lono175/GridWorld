@@ -33,10 +33,14 @@ def getNearObj(observation, type):
         res.append(obj[2]) 
     return tuple(res)
 
-def getRelFeature(ob):
+def getObjFeature(ob):
     marioLoc, monLoc, coinLoc = ob
 
     feaList = []
+    #add mario Loc into it
+    feaList.append(1, XType, marioLoc[0])
+    feaList.append(1, YType, marioLoc[1])
+
     #separate it into individual faetures
     i = 0
     for loc in monLoc:
@@ -107,58 +111,16 @@ def getFeature(observation, order, type):
         res.append(tuple(listOfLoc))
     return res
 
-class CoinPre:
-    def __init__(self, order):
-        self.order = order #order = 1 for one coin predicate
-    def getFeature(self, observation):
-        return getFeature(observation, self.order, coinType)
-    #def getCoinLoc(self, coinList, depth):
-        #res = []
-        #if depth == 0:
-            #for obj in coinList:
-                #res.append([obj])    
-            #return res
-        #else:
-            #popCount = len(coinList) - depth - 1
-            #last = coinList.pop()
-            #lowerCoinList = self.getCoinLoc(copy.copy(coinList), depth-1)
-            #print "---------------------------"
-            #coinList.append(last)
+def GetRelFeature( observation, monsterOrder, coinOrder):
+    marioLoc, objLoc = observation
+    coinFea = getFeature(observation, coinOrder, coinType)
+    monFea = getFeature(observation, monsterOrder, monsterType)
+    res = []
+    for coin in coinFea:
+        for monster in monFea:
+            res.append(getObjFeature((marioLoc, monster, coin)))
+    return res
 
-            #print "lower ", lowerCoinList
-            #print "coin ", coinList
-            #while coinList != [] and lowerCoinList != []:
-               #last = coinList.pop()
-               #print "last ", last
-               #print "coin2 ", coinList
-               #print "lower2 ", lowerCoinList
-               #for feature in lowerCoinList:
-                   #feature.append(last)
-                   #res.append(copy.copy(feature))
-                   #feature.pop() #append will change list itself
-               #print "res ", res
-               #for i in range(0, popCount):
-                   #lowerCoinList.pop()
-               #popCount = popCount - 1
-        #res.reverse()
-        #return res
-        
-        
-
-class MonsterPre:
-    def __init__(self, order):
-        self.order = order #order = 1 for one coin predicate
-
-    def getFeature(self, observation):
-        return getFeature(observation, self.order, monsterType)
-
-    #def getFeature(self, observation):
-        #marioLoc, objLoc = observation
-        #res = []
-        #for obj in objLoc:
-            #if obj[0] == monsterType:
-                #res.append((obj[1] - marioLoc[0], obj[2] - marioLoc[1]))
-        #return res
 
 class CoinAndMonsterPre:
     def __init__(self, monsterOrder, coinOrder):
@@ -175,17 +137,6 @@ class CoinAndMonsterPre:
                 res.append(getRelFeature((marioLoc, monster, coin)))
         return res
 
-    #def getFeature(self, observation):
-        #marioLoc, objLoc = observation
-        #res = []
-        #for coin in objLoc:
-            #if coin[0] == coinType:
-                #for monster in objLoc:
-                    #if monster[0] == monsterType:
-                        #coinDiff = (coin[1] - marioLoc[0], coin[2] - marioLoc[1])
-                        #monsterDiff = (monster[1] - marioLoc[0], monster[2] - marioLoc[1])
-                        #res.append((coinDiff, monsterDiff))
-        #return res
 
 if __name__ == "__main__":
     coinPre = CoinPre(1)
